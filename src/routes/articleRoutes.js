@@ -1,7 +1,7 @@
 const express = require('express');
 const Article = require('../models/Article'); // Import Article model
 const router = express.Router();
-
+ 
 // POST a new article
 router.post('/', async (req, res) => {
   try {

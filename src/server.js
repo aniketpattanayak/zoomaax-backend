@@ -1,46 +1,58 @@
 const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const dotenv = require('dotenv');
-const connectDB = require('./db'); // Import the updated connectDB function
-const articleRoutes = require('./routes/articleRoutes'); // Import routes
+const Article = require('../models/Article'); // Import Article model
+const router = express.Router();
 
-dotenv.config(); // Load environment variables from .env file
+// POST a new article
+router.post('/', async (req, res) => {
+  try {
+    const { title, description, content, category, author, image } = req.body;
 
-const app = express();
-app.use(express.json()); // Middleware to parse JSON
-
-// Define allowed origins (e.g., for local development on different ports or production)
-const allowedOrigins = ['http://localhost:3000', 'http://localhost:5723', 'http://localhost:5724'];
-
-// CORS configuration
-const corsOptions = {
-  origin: function (origin, callback) {
-    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
-      callback(null, true); // Allow the request
-    } else {
-      callback(new Error('Not allowed by CORS')); // Deny the request
+    if (!title || !description || !content || !category || !author || !image) {
+      return res.status(400).json({ message: 'All fields are required.' });
     }
-  },
-};
 
-app.use(cors(corsOptions)); // Enable CORS with the specified options
+    const newArticle = new Article({
+      title,
+      description,
+      content,
+      category,
+      author,
+      image,
+    });
 
-// Connect to MongoDB
-connectDB(); // Use the connectDB function to establish the database connection
-
-// Mount article routes
-app.use('/api/articles', articleRoutes); // All routes in articleRoutes.js are prefixed with /api/articles
-
-// Global error handling (Optional)
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: 'Something went wrong!' });
+    await newArticle.save();
+    res.status(201).json(newArticle);
+  } catch (error) {
+    res.status(500).json({ message: 'Error creating article.', error: error.message });
+  }
 });
 
-const PORT = process.env.PORT || 3000;
-
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// GET all articles
+router.get('/', async (req, res) => {
+  try {
+    const articles = await Article.find(); // Fetch all articles
+    res.status(200).json(articles);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching articles.', error: error.message });
+  }
 });
+
+// PUT (update) an article by ID
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    const updatedArticle = await Article.findByIdAndUpdate(id, updates, { new: true });
+
+    if (!updatedArticle) {
+      return res.status(404).json({ message: 'Article not found.' });
+    }
+
+    res.status(200).json(updatedArticle);
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating article.', error: error.message });
+  }
+});
+
+module.exports = router;
